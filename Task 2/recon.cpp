@@ -1,5 +1,7 @@
 #include "recon.h"
 #include <windows.h>
+#include <Lmcons.h>
+#include <comutil.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -13,6 +15,7 @@
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
+#pragma comment(lib, "comsuppw.lib")
 
 static void LogDebug(const std::string& msg) {
     std::ofstream ofs("debug_log.txt", std::ios::app);
@@ -74,7 +77,7 @@ bool CollectAndSendData() {
                 hres = CoSetProxyBlanket(pSvc, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
                 if (SUCCEEDED(hres)) {
                     IEnumWbemClassObject* pEnumerator = NULL;
-                    hres = pSvc->ExecQuery(bstr_t("WQL"), bstr_t("SELECT * FROM AntiVirusProduct"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumerator);
+                    hres = pSvc->ExecQuery(_bstr_t(L"WQL"), _bstr_t(L"SELECT * FROM AntiVirusProduct"), WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, NULL, &pEnumerator);
                     if (SUCCEEDED(hres)) {
                         IWbemClassObject* pclsObj = NULL;
                         ULONG uReturn = 0;
