@@ -75,3 +75,48 @@
 [Main] --- RedSmartSystem Started ---
 [Task2] Sending Base64 payload to http://localhost:3000/receive
 [Task2] HTTP Request succeeded. Status Code: 200
+[Main] --- RedSmartSystem Started ---
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Main] --- RedSmartSystem Started ---
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Main] --- RedSmartSystem Started ---
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200
+[Task2] Sending Base64 payload to http://localhost:3000/receive
+[Task2] HTTP Request succeeded. Status Code: 200

